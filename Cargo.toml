@@ -1,0 +1,9 @@
+[package]
+name = "aoc2024"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+macros = {path = "./macros"}
+reqwest = { version = "0.12", features = ["json","cookies"] }
+tokio = { version = "1", features = ["full"] }
