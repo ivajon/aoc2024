@@ -116,8 +116,11 @@ pub fn aoc(event: TokenStream, item: TokenStream) -> TokenStream {
     let (year, day, task, cookie) = (event.year.0, event.day.0, event.task.0, event.cookies);
     let name = r#fn.sig.ident;
     let get_url = format!("https://adventofcode.com/{year}/day/{day}/input");
-    let set_url = format!("https://advent.fly.dev/solve/{year}/{day}/{task}");
+    let set_url = format!("https://adventofcode.com/{year}/day/{day}/answer");
     let fn_name: proc_macro2::TokenStream = format!("aoc_{year}_{day}_{task}").parse().unwrap();
+    let cache_name: String = format!("/tmp/aoc_{year}_{day}_{task}_input");
+
+    let task_solved: String = format!("/tmp/aoc_{year}_{day}_{task}_solved");
     let cache_name: String = format!("/tmp/aoc_{year}_{day}_{task}_input");
 
     let cookie = cookie.replace("\n", "");
@@ -157,24 +160,39 @@ pub fn aoc(event: TokenStream, item: TokenStream) -> TokenStream {
             };
 
             let result = #name(data);
-            let result_request = client
-                .request(Method::POST, #set_url)
-                .body(result)
-                .header("accept", "text/plain")
-                .header("content-type", "text/plain")
-                .header("Cookie", &format!("session={}",#cookie))
-                .build()
-                .unwrap();
-            let resp2 = client.execute(result_request).await?;
-            match resp2.status().is_success() {
-                true => {
-                    println!("Accepted :)");
-                    let text = resp2.text().await?;
-                    println!("Text : {:?}",text);
-                },
-                false => {
-                    let text = resp2.text().await?;
-                    eprintln!("Not accepted : {text}");
+            println!("Result : {result}");
+            let file_handle = std::path::Path::new(#task_solved);
+            if !file_handle.exists() {
+                let mut data = std::collections::HashMap::new();
+                data.insert("level",#task.to_string());
+                data.insert("annwer",result);
+                let result_request = client
+                    .request(Method::POST, #set_url)
+                    //.body(format!("level={}&answer={}",#task,result))
+                    .header("Accept", "text/plain")
+                    //.header("Content-Type", "application/x-www-form-urlencoded")
+                    .header("Cookie", &format!("session={}",#cookie)).json(&data)
+                    .build()
+                    .unwrap();
+                let resp2 = client.execute(result_request).await?;
+                match resp2.status().is_success() {
+                    true => {
+                        let text = resp2.text().await?;
+                        if text.contains("That's the right answer") {
+                            println!("Accepted :)");
+                            eprintln!("Text:\n{text}");
+                            std::fs::File::create(file_handle).unwrap();
+                        }
+                        else {
+                            eprintln!("Answer not accepted :(");
+                            eprintln!("Text:\n{text}");
+
+                        }
+                    },
+                    false => {
+                        let text = resp2.text().await?;
+                        eprintln!("Not accepted : {text}");
+                    }
                 }
             }
             Ok(())
