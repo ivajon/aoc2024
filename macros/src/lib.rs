@@ -1,8 +1,6 @@
-use std::{io::Read, path::Path};
-
-use proc_macro::{Ident, Span, TokenStream};
-use quote::{ToTokens, TokenStreamExt};
-use syn::{parse::Parse, parse_macro_input, Pat, PatType, Token};
+use proc_macro::TokenStream;
+use quote::ToTokens;
+use syn::{parse::Parse, parse_macro_input, Token};
 
 struct Event {
     year: Year,
@@ -14,6 +12,11 @@ struct Event {
 struct Year(usize);
 struct Day(usize);
 struct Task(usize);
+
+struct LeaderBoard {
+    code: Option<String>,
+    cookie: String,
+}
 
 impl Parse for Year {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
@@ -82,7 +85,6 @@ impl Parse for Event {
         })
     }
 }
-
 impl quote::ToTokens for Year {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let val = self.0;
@@ -113,35 +115,8 @@ pub fn aoc(event: TokenStream, item: TokenStream) -> TokenStream {
     println!("Parsed function input:)");
     let (year, day, task, cookie) = (event.year.0, event.day.0, event.task.0, event.cookies);
     let name = r#fn.sig.ident;
-    let args = r#fn.sig.inputs.clone();
-    let rets = r#fn.sig.output.clone();
-    let rets = match &rets {
-        syn::ReturnType::Default => quote::quote! {},
-        _ => quote::quote! { #rets},
-    };
     let get_url = format!("https://adventofcode.com/{year}/day/{day}/input");
     let set_url = format!("https://advent.fly.dev/solve/{year}/{day}/{task}");
-    let args_call: TokenStream = args
-        .clone()
-        .iter()
-        .map(|arg| match arg {
-            syn::FnArg::Typed(PatType {
-                attrs: _,
-                pat,
-                colon_token: _,
-                ty: _,
-            }) => match *pat.clone() {
-                Pat::Ident(i) => i.ident,
-                _ => panic!(),
-            },
-            _ => panic!("Cannot use associated functions."),
-        })
-        .map(|el| format!("{}", el.into_token_stream()))
-        .collect::<Vec<String>>()
-        .join(",")
-        .parse()
-        .unwrap();
-    let args_call: proc_macro2::TokenStream = args_call.into();
     let fn_name: proc_macro2::TokenStream = format!("aoc_{year}_{day}_{task}").parse().unwrap();
     let cache_name: String = format!("/tmp/aoc_{year}_{day}_{task}_input");
 
