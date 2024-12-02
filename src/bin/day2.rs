@@ -48,52 +48,61 @@ fn aoc(input: String) -> String {
 fn aoc_2(input: String) -> String {
     let lines = input.lines();
 
-    let line_is_valid = |line: Vec<u32>| -> bool {
+    let line_is_valid = |line: String, skip: Option<usize>| -> (bool, usize) {
         let mut sign = None;
         let mut prev = None;
+        let fields = line
+            .split(" ")
+            .into_iter()
+            .map(|el| el.parse::<u32>().unwrap())
+            .collect::<Vec<u32>>();
 
-        for (_idx, num) in line.clone().into_iter().enumerate() {
-            if prev.is_none() {
-                prev = Some(num);
-
+        for (idx, num) in fields.clone().into_iter().enumerate() {
+            if skip.is_some_and(|skip| skip == idx) {
                 continue;
             }
             // we are the first char.
+            if prev.is_none() {
+                prev = Some(num);
+                continue;
+            }
             let inner_prev = unsafe { &mut prev.unwrap_unchecked() };
             if sign.is_none() {
                 sign = Some(num > *inner_prev);
             }
             if sign.unwrap() != (num > *inner_prev) {
-                return false;
+                if idx == fields.len() {
+                    return (false, idx + 1);
+                }
+
+                return (false, idx);
             }
             let diff = u32::abs_diff(num, *inner_prev);
             if diff < 1 || diff > 3 {
-                return false;
+                return (false, idx);
             }
 
             prev = Some(num);
         }
-        true
+        println!("line : {line} ");
+        (true, 0)
     };
     lines
         .into_iter()
-        .map(|line| {
-            let fields = line
-                .split(" ")
-                .into_iter()
-                .map(|el| el.parse::<u32>().unwrap())
-                .collect::<Vec<u32>>();
-            if line_is_valid(fields.clone()) {
-                return true;
-            }
-            for idx in 0..fields.len() {
-                let mut clone = fields.clone();
-                clone.remove(idx);
-                if line_is_valid(clone) {
+        .map(|line| match line_is_valid(line.to_string(), None) {
+            (true, _) => true,
+            (false, num) => {
+                if line_is_valid(line.to_string(), Some(num)).0 {
                     return true;
                 }
+                if line_is_valid(line.to_string(), Some(num - 1)).0 {
+                    return true;
+                }
+                if line_is_valid(line.to_string(), Some(num.checked_sub(2).unwrap_or(0))).0 {
+                    return true;
+                }
+                false
             }
-            false
         })
         .filter(|el| *el)
         .count()
