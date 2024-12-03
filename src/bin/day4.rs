@@ -21,11 +21,15 @@ mod test {
 
     #[test]
     fn test_ex1() {
-        assert!(&super::aoc(input()) == "");
+        let output = &super::aoc(input());
+        println!("Output : {output}");
+        assert!(output == "");
     }
     #[test]
     fn test_ex2() {
-        assert!(&super::aoc_2(input()) == "");
+        let output = &super::aoc_2(input());
+        println!("Output : {output}");
+        assert!(output == "");
     }
 }
 
