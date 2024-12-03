@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, str::FromStr};
 
 /// Enumerates all of the literal numbers in lower case.
 pub const LITERAL_MAP: [&'static str; 10] = [
@@ -99,6 +99,47 @@ impl<Pattern: core::fmt::Debug + Sized + Eq + Clone, T: core::fmt::Debug + Sized
 }
 
 pub struct LiteralNumbers;
+
+/// Converts a string to the target type, typically u32.
+pub fn parse<T>(data: &str) -> Vec<T>
+where
+    T: FromStr,
+{
+    data.split(" ")
+        .into_iter()
+        // We want to panic if this does not hold.
+        .map(|el| unsafe { el.parse::<T>().unwrap_unchecked() })
+        .collect()
+}
+
+/// Converts a string to the target type, typically u32.
+pub fn parse_delimited<T>(data: &str, delimitor: &str) -> Vec<T>
+where
+    T: FromStr,
+{
+    data.split(delimitor)
+        .into_iter()
+        // We want to panic if this does not hold.
+        .map(|el| unsafe { el.parse::<T>().unwrap_unchecked() })
+        .collect()
+}
+
+/// Expects the entire string object. This will split in to lines and defines columns as it goes.
+///
+/// This returns a set of culumns.
+pub fn to_nd_arry<T, const N: usize>(data: &str) -> [Vec<T>; N]
+where
+    T: FromStr + Clone,
+{
+    let lines = data.lines();
+    let mut ret: [Vec<T>; N] = [const { Vec::new() }; N];
+    for (line_idx, line) in lines.enumerate() {
+        parse::<T>(line)
+            .iter()
+            .for_each(|el| ret[line_idx].push(el.clone()));
+    }
+    ret
+}
 
 impl LiteralNumbers {
     /// Returns the first literal number 1..9 or numeric char from the end of the string.
